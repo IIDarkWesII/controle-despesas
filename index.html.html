@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Despesas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg, #1c1c1c, #2b2b2b);
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #242424;
+      padding: 25px;
+      border-radius: 20px;
+      width: 480px;
+      min-height: 650px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      color: #4cafef;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 8px;
+      display: block;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0 12px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    input {
+      background: #333;
+      color: #fff;
+    }
+    input:focus {
+      outline: 2px solid #4cafef;
+    }
+
+    button {
+      background: #4cafef;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3b9cd6;
+    }
+
+    .despesas {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      padding-right: 5px;
+    }
+
+    .despesa-item {
+      background: #333;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 6px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .despesa-item span {
+      flex: 1;
+    }
+
+    .despesa-item input {
+      width: 80px;
+      text-align: right;
+      padding: 6px;
+    }
+
+    .despesa-item button {
+      background: #e53935;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+    }
+    .despesa-item button:hover {
+      background: #c62828;
+    }
+
+    .resultado {
+      margin-top: 15px;
+      padding: 12px;
+      text-align: center;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .positivo {
+      background: #2e7d32;
+      color: #fff;
+    }
+    .negativo {
+      background: #c62828;
+      color: #fff;
+    }
+
+    .grafico-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 15px;
+    }
+
+    canvas {
+      max-height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💰 Controle de Despesas</h1>
+
+    <label for="salario">Salário:</label>
+    <input type="number" id="salario" placeholder="Digite seu salário">
+
+    <label for="nomeDespesa">Nome da Despesa:</label>
+    <input type="text" id="nomeDespesa" placeholder="Ex: Aluguel">
+
+    <label for="valorDespesa">Valor da Despesa:</label>
+    <input type="number" id="valorDespesa" placeholder="Ex: 1200">
+
+    <button id="btnAdicionar">Adicionar Despesa</button>
+
+    <div class="despesas" id="listaDespesas"></div>
+
+    <div id="resultado" class="resultado"></div>
+
+    <div class="grafico-container">
+      <canvas id="graficoDespesas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let despesas = [];
+    let salario = 0;
+    let chart = null;
+
+    // Carregar dados salvos
+    window.onload = function() {
+      const dadosSalvos = JSON.parse(localStorage.getItem("financas"));
+      if (dadosSalvos) {
+        salario = dadosSalvos.salario || 0;
+        despesas = dadosSalvos.despesas || [];
+        document.getElementById("salario").value = salario;
+        atualizarLista();
+        calcularSaldo();
+      }
+    };
+
+    document.getElementById("salario").addEventListener("input", function() {
+      salario = parseFloat(this.value) || 0;
+      salvarDados();
+      calcularSaldo();
+    });
+
+    function adicionarDespesa() {
+      const nome = document.getElementById("nomeDespesa").value.trim();
+      const valor = parseFloat(document.getElementById("valorDespesa").value);
+
+      if (nome && valor) {
+        despesas.push({ nome, valor });
+        atualizarLista();
+        calcularSaldo();
+        salvarDados();
+        document.getElementById("nomeDespesa").value = "";
+        document.getElementById("valorDespesa").value = "";
+        document.getElementById("nomeDespesa").focus();
+      }
+    }
+
+    document.getElementById("btnAdicionar").addEventListener("click", adicionarDespesa);
+
+    function atualizarLista() {
+      const lista = document.getElementById("listaDespesas");
+      lista.innerHTML = "";
+      despesas.forEach((d, index) => {
+        const item = document.createElement("div");
+        item.className = "despesa-item";
+
+        const nomeSpan = document.createElement("span");
+        nomeSpan.textContent = d.nome;
+
+        const inputValor = document.createElement("input");
+        inputValor.type = "number";
+        inputValor.value = d.valor.toFixed(2);
+        inputValor.addEventListener("input", function() {
+          despesas[index].valor = parseFloat(this.value) || 0;
+          calcularSaldo();
+          salvarDados();
+        });
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.textContent = "X";
+        btnExcluir.onclick = () => {
+          removerDespesa(index);
+        };
+
+        item.appendChild(nomeSpan);
+        item.appendChild(inputValor);
+        item.appendChild(btnExcluir);
+
+        lista.appendChild(item);
+      });
+    }
+
+    function removerDespesa(index) {
+      despesas.splice(index, 1);
+      atualizarLista();
+      calcularSaldo();
+      salvarDados();
+    }
+
+    function calcularSaldo() {
+      let totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
+      let saldo = salario - totalDespesas;
+
+      const resultado = document.getElementById("resultado");
+      resultado.innerHTML = `Saldo Final: R$ ${saldo.toFixed(2)}`;
+      
+      if (saldo >= 0) {
+        resultado.className = "resultado positivo";
+      } else {
+        resultado.className = "resultado negativo";
+      }
+
+      atualizarGrafico();
+    }
+
+    function atualizarGrafico() {
+      const ctx = document.getElementById("graficoDespesas").getContext("2d");
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: despesas.map(d => d.nome),
+          datasets: [{
+            data: despesas.map(d => d.valor),
+            backgroundColor: [
+              "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40"
+            ]
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { labels: { color: "#000", font: { size: 14 } } }
+          }
+        }
+      });
+    }
+
+    function salvarDados() {
+      localStorage.setItem("financas", JSON.stringify({ salario, despesas }));
+    }
+
+    // 🚀 Navegação com Enter
+    const campos = ["salario", "nomeDespesa", "valorDespesa"];
+    campos.forEach((id, i) => {
+      document.getElementById(id).addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (i < campos.length - 1) {
+            document.getElementById(campos[i+1]).focus();
+          } else {
+            adicionarDespesa();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
