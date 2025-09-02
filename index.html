@@ -1,165 +1,330 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Painel de Clientes</title>
-<style>
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f5f5f5;
-    color: #333;
-    padding: 30px;
-    min-height: 100vh;
-}
-h2 { margin-bottom: 15px; color: #444; }
-#relogio {
-    font-size: 2em;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 30px;
-    padding: 15px 0;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.formulario {
-    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px;
-    background: #fff; padding: 15px; border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.formulario input, .formulario button {
-    padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 5px;
-}
-.formulario button {
-    background: #4CAF50; color: white; border: none; cursor: pointer; transition: background 0.3s;
-}
-.formulario button:hover { background: #45a049; }
-#listaClientes { display: flex; flex-direction: column; gap: 10px; }
-.cliente {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 15px;
-    background: #fff; border-radius: 10px;
-    box-shadow: 0 3px 5px rgba(0,0,0,0.08);
-    transition: transform 0.2s;
-}
-.cliente:hover { transform: translateY(-2px); }
-.status { width: 18px; height: 18px; border-radius: 50%; margin-right: 15px; transition: background-color 0.5s; }
-.cliente-info { display: flex; align-items: center; }
-.cliente-info div { display: flex; flex-direction: column; }
-.cliente-info span { font-size: 0.9em; color: #666; }
-button.deletar {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-button.deletar:hover { background: #d32f2f; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Despesas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg, #1c1c1c, #2b2b2b);
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #242424;
+      padding: 25px;
+      border-radius: 20px;
+      width: 480px;
+      min-height: 650px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      color: #4cafef;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 8px;
+      display: block;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0 12px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    input {
+      background: #333;
+      color: #fff;
+    }
+    input:focus {
+      outline: 2px solid #4cafef;
+    }
+
+    button {
+      background: #4cafef;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3b9cd6;
+    }
+
+    .despesas {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      padding-right: 5px;
+    }
+
+    .despesa-item {
+      background: #333;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 6px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .despesa-item span {
+      flex: 1;
+    }
+
+    .despesa-item input {
+      width: 100px;
+      text-align: right;
+      padding: 6px;
+      background: #444;
+      color: #fff;
+    }
+
+    .despesa-item button {
+      background: #e53935;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+    }
+    .despesa-item button:hover {
+      background: #c62828;
+    }
+
+    .resultado {
+      margin-top: 15px;
+      padding: 12px;
+      text-align: center;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .positivo {
+      background: #2e7d32;
+      color: #fff;
+    }
+    .negativo {
+      background: #c62828;
+      color: #fff;
+    }
+
+    .grafico-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 15px;
+    }
+
+    canvas {
+      max-height: 200px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>💰 Controle de Despesas</h1>
 
-<h2>Relógio em Tempo Real</h2>
-<div id="relogio">00:00:00</div>
+    <label for="salario">Salário:</label>
+    <input type="text" id="salario" placeholder="Digite seu salário">
 
-<h2>Adicionar Cliente</h2>
-<div class="formulario">
-    <input type="text" id="nomeCliente" placeholder="Nome do Cliente">
-    <input type="time" id="horaAbertura">
-    <input type="time" id="horaFechamento">
-    <button onclick="adicionarCliente()">Adicionar Cliente</button>
-</div>
+    <label for="nomeDespesa">Nome da Despesa:</label>
+    <input type="text" id="nomeDespesa" placeholder="Ex: Aluguel">
 
-<h2>Clientes</h2>
-<div id="listaClientes"></div>
+    <label for="valorDespesa">Valor da Despesa:</label>
+    <input type="text" id="valorDespesa" placeholder="Ex: R$ 1.200,00">
 
-<script>
-let clientes = [];
+    <button id="btnAdicionar">Adicionar Despesa</button>
 
-// Carregar clientes do LocalStorage
-window.onload = function() {
-    const dados = localStorage.getItem('clientes');
-    if(dados) {
-        clientes = JSON.parse(dados);
-        renderizarClientes();
+    <div class="despesas" id="listaDespesas"></div>
+
+    <div id="resultado" class="resultado"></div>
+
+    <div class="grafico-container">
+      <canvas id="graficoDespesas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let despesas = [];
+    let salario = 0;
+    let chart = null;
+
+    // Função para formatar valores em Real
+    function formatarReal(valor) {
+      valor = valor.replace(/\D/g, ""); 
+      valor = (valor / 100).toFixed(2); 
+      return valor.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
-};
 
-// Atualizar relógio
-function atualizarRelogio() {
-    const agora = new Date();
-    const h = String(agora.getHours()).padStart(2,'0');
-    const m = String(agora.getMinutes()).padStart(2,'0');
-    const s = String(agora.getSeconds()).padStart(2,'0');
-    document.getElementById('relogio').innerText = `${h}:${m}:${s}`;
-    atualizarStatusClientes();
-}
-setInterval(atualizarRelogio, 1000);
+    // Carregar dados salvos
+    window.onload = function() {
+      const dadosSalvos = JSON.parse(localStorage.getItem("financas"));
+      if (dadosSalvos) {
+        salario = dadosSalvos.salario || 0;
+        despesas = dadosSalvos.despesas || [];
+        document.getElementById("salario").value = salario > 0 ? `R$ ${formatarReal((salario*100).toString())}` : "";
+        atualizarLista();
+        calcularSaldo();
+      }
+    };
 
-// Adicionar cliente
-function adicionarCliente() {
-    const nome = document.getElementById('nomeCliente').value.trim();
-    const abertura = document.getElementById('horaAbertura').value;
-    const fechamento = document.getElementById('horaFechamento').value;
-    if(nome && abertura && fechamento){
-        clientes.push({nome, abertura, fechamento});
-        salvarClientes();
-        document.getElementById('nomeCliente').value='';
-        document.getElementById('horaAbertura').value='';
-        document.getElementById('horaFechamento').value='';
-        renderizarClientes();
-    } else { alert('Preencha todos os campos!'); }
-}
-
-// Salvar clientes no LocalStorage
-function salvarClientes() {
-    localStorage.setItem('clientes', JSON.stringify(clientes));
-}
-
-// Atualizar status dos clientes
-function atualizarStatusClientes() {
-    const agora = new Date();
-    const h = String(agora.getHours()).padStart(2,'0');
-    const m = String(agora.getMinutes()).padStart(2,'0');
-    const agoraStr = `${h}:${m}`;
-    clientes.forEach((c,i)=>{
-        const status = (agoraStr >= c.abertura && agoraStr <= c.fechamento) ? 'fechado' : 'aberto';
-        const bolinha = document.getElementById(`status-${i}`);
-        if(bolinha){ bolinha.style.backgroundColor = (status==='fechado')?'red':'green'; }
+    // Input salário com formatação
+    const salarioInput = document.getElementById("salario");
+    salarioInput.addEventListener("input", (e) => {
+      let valor = e.target.value;
+      valor = formatarReal(valor);
+      e.target.value = valor ? `R$ ${valor}` : "";
+      salario = parseFloat(valor.replace(",", ".")) || 0;
+      salvarDados();
+      calcularSaldo();
     });
-}
 
-// Renderizar clientes
-function renderizarClientes() {
-    const container = document.getElementById('listaClientes');
-    container.innerHTML='';
-    clientes.forEach((c,i)=>{
-        const div = document.createElement('div');
-        div.className='cliente';
-        div.innerHTML=`
-            <div class="cliente-info">
-                <div class="status" id="status-${i}"></div>
-                <div>
-                    <strong>${c.nome}</strong>
-                    <span>${c.abertura} - ${c.fechamento}</span>
-                </div>
-            </div>
-            <button class="deletar" onclick="deletarCliente(${i})">Deletar</button>
-        `;
-        container.appendChild(div);
+    // Input valor despesa com formatação
+    const valorDespesaInput = document.getElementById("valorDespesa");
+    valorDespesaInput.addEventListener("input", (e) => {
+      let valor = e.target.value;
+      valor = formatarReal(valor);
+      e.target.value = valor ? `R$ ${valor}` : "";
     });
-    atualizarStatusClientes();
-}
 
-// Deletar cliente
-function deletarCliente(index) {
-    clientes.splice(index, 1);
-    salvarClientes();
-    renderizarClientes();
-}
-</script>
+    function adicionarDespesa() {
+      const nome = document.getElementById("nomeDespesa").value.trim();
+      let valorStr = valorDespesaInput.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".");
+      const valor = parseFloat(valorStr);
 
+      if (nome && valor) {
+        despesas.push({ nome, valor });
+        atualizarLista();
+        calcularSaldo();
+        salvarDados();
+        document.getElementById("nomeDespesa").value = "";
+        valorDespesaInput.value = "";
+        document.getElementById("nomeDespesa").focus();
+      }
+    }
+
+    document.getElementById("btnAdicionar").addEventListener("click", adicionarDespesa);
+
+    function atualizarLista() {
+      const lista = document.getElementById("listaDespesas");
+      lista.innerHTML = "";
+      despesas.forEach((d, index) => {
+        const item = document.createElement("div");
+        item.className = "despesa-item";
+
+        const nomeSpan = document.createElement("span");
+        nomeSpan.textContent = d.nome;
+
+        const inputValor = document.createElement("input");
+        inputValor.type = "text";
+        inputValor.value = `R$ ${formatarReal((d.valor*100).toString())}`;
+        inputValor.addEventListener("input", function() {
+          let valorStr = this.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".");
+          despesas[index].valor = parseFloat(valorStr) || 0;
+          this.value = `R$ ${formatarReal((despesas[index].valor*100).toString())}`;
+          calcularSaldo();
+          salvarDados();
+        });
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.textContent = "X";
+        btnExcluir.onclick = () => {
+          removerDespesa(index);
+        };
+
+        item.appendChild(nomeSpan);
+        item.appendChild(inputValor);
+        item.appendChild(btnExcluir);
+
+        lista.appendChild(item);
+      });
+    }
+
+    function removerDespesa(index) {
+      despesas.splice(index, 1);
+      atualizarLista();
+      calcularSaldo();
+      salvarDados();
+    }
+
+    function calcularSaldo() {
+      let totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
+      let saldo = salario - totalDespesas;
+
+      const resultado = document.getElementById("resultado");
+      resultado.innerHTML = `Saldo Final: R$ ${formatarReal((saldo*100).toString())}`;
+      
+      if (saldo >= 0) {
+        resultado.className = "resultado positivo";
+      } else {
+        resultado.className = "resultado negativo";
+      }
+
+      atualizarGrafico();
+    }
+
+    function atualizarGrafico() {
+      const ctx = document.getElementById("graficoDespesas").getContext("2d");
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: despesas.map(d => d.nome),
+          datasets: [{
+            data: despesas.map(d => d.valor),
+            backgroundColor: [
+              "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40"
+            ]
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { labels: { color: "#000", font: { size: 14 } } }
+          }
+        }
+      });
+    }
+
+    function salvarDados() {
+      localStorage.setItem("financas", JSON.stringify({ salario, despesas }));
+    }
+
+    // Navegação com Enter
+    const campos = ["salario", "nomeDespesa", "valorDespesa"];
+    campos.forEach((id, i) => {
+      document.getElementById(id).addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (i < campos.length - 1) {
+            document.getElementById(campos[i+1]).focus();
+          } else {
+            adicionarDespesa();
+          }
+        }
+      });
+    });
+  </script>
 </body>
 </html>
