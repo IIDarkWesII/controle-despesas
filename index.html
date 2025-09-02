@@ -95,9 +95,11 @@
     }
 
     .despesa-item input {
-      width: 80px;
+      width: 100px;
       text-align: right;
       padding: 6px;
+      background: #444;
+      color: #fff;
     }
 
     .despesa-item button {
@@ -143,13 +145,13 @@
     <h1>💰 Controle de Despesas</h1>
 
     <label for="salario">Salário:</label>
-    <input type="number" id="salario" placeholder="Digite seu salário">
+    <input type="text" id="salario" placeholder="Digite seu salário">
 
     <label for="nomeDespesa">Nome da Despesa:</label>
     <input type="text" id="nomeDespesa" placeholder="Ex: Aluguel">
 
     <label for="valorDespesa">Valor da Despesa:</label>
-    <input type="number" id="valorDespesa" placeholder="Ex: 1200">
+    <input type="text" id="valorDespesa" placeholder="Ex: R$ 1.200,00">
 
     <button id="btnAdicionar">Adicionar Despesa</button>
 
@@ -167,27 +169,48 @@
     let salario = 0;
     let chart = null;
 
+    // Função para formatar valores em Real
+    function formatarReal(valor) {
+      valor = valor.replace(/\D/g, ""); 
+      valor = (valor / 100).toFixed(2); 
+      return valor.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
     // Carregar dados salvos
     window.onload = function() {
       const dadosSalvos = JSON.parse(localStorage.getItem("financas"));
       if (dadosSalvos) {
         salario = dadosSalvos.salario || 0;
         despesas = dadosSalvos.despesas || [];
-        document.getElementById("salario").value = salario;
+        document.getElementById("salario").value = salario > 0 ? `R$ ${formatarReal((salario*100).toString())}` : "";
         atualizarLista();
         calcularSaldo();
       }
     };
 
-    document.getElementById("salario").addEventListener("input", function() {
-      salario = parseFloat(this.value) || 0;
+    // Input salário com formatação
+    const salarioInput = document.getElementById("salario");
+    salarioInput.addEventListener("input", (e) => {
+      let valor = e.target.value;
+      valor = formatarReal(valor);
+      e.target.value = valor ? `R$ ${valor}` : "";
+      salario = parseFloat(valor.replace(",", ".")) || 0;
       salvarDados();
       calcularSaldo();
     });
 
+    // Input valor despesa com formatação
+    const valorDespesaInput = document.getElementById("valorDespesa");
+    valorDespesaInput.addEventListener("input", (e) => {
+      let valor = e.target.value;
+      valor = formatarReal(valor);
+      e.target.value = valor ? `R$ ${valor}` : "";
+    });
+
     function adicionarDespesa() {
       const nome = document.getElementById("nomeDespesa").value.trim();
-      const valor = parseFloat(document.getElementById("valorDespesa").value);
+      let valorStr = valorDespesaInput.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".");
+      const valor = parseFloat(valorStr);
 
       if (nome && valor) {
         despesas.push({ nome, valor });
@@ -195,7 +218,7 @@
         calcularSaldo();
         salvarDados();
         document.getElementById("nomeDespesa").value = "";
-        document.getElementById("valorDespesa").value = "";
+        valorDespesaInput.value = "";
         document.getElementById("nomeDespesa").focus();
       }
     }
@@ -213,10 +236,12 @@
         nomeSpan.textContent = d.nome;
 
         const inputValor = document.createElement("input");
-        inputValor.type = "number";
-        inputValor.value = d.valor.toFixed(2);
+        inputValor.type = "text";
+        inputValor.value = `R$ ${formatarReal((d.valor*100).toString())}`;
         inputValor.addEventListener("input", function() {
-          despesas[index].valor = parseFloat(this.value) || 0;
+          let valorStr = this.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".");
+          despesas[index].valor = parseFloat(valorStr) || 0;
+          this.value = `R$ ${formatarReal((despesas[index].valor*100).toString())}`;
           calcularSaldo();
           salvarDados();
         });
@@ -247,7 +272,7 @@
       let saldo = salario - totalDespesas;
 
       const resultado = document.getElementById("resultado");
-      resultado.innerHTML = `Saldo Final: R$ ${saldo.toFixed(2)}`;
+      resultado.innerHTML = `Saldo Final: R$ ${formatarReal((saldo*100).toString())}`;
       
       if (saldo >= 0) {
         resultado.className = "resultado positivo";
@@ -286,7 +311,7 @@
       localStorage.setItem("financas", JSON.stringify({ salario, despesas }));
     }
 
-    // 🚀 Navegação com Enter
+    // Navegação com Enter
     const campos = ["salario", "nomeDespesa", "valorDespesa"];
     campos.forEach((id, i) => {
       document.getElementById(id).addEventListener("keydown", function(e) {
